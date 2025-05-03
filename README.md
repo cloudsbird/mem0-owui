@@ -14,7 +14,7 @@ A memory filter integration for OpenWebUI using mem0 to persist and retrieve con
 
 1. Make sure you have pipelines installed
 2. You can Download the `mem0-owui.py`
-3. Upload under `Settings > Admin Settings > Pipelines > Select the "mem0-oqui.py" > Upload
+3. Upload under `Settings > Admin Settings > Pipelines > Select the "mem0-oqui.py" > Upload`
 4. Put your API Key from mem0.
 5. You are good to go
 
