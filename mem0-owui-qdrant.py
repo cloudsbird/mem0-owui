@@ -1,5 +1,5 @@
 """
-title: mem0-owui
+title: mem0-owui-qdrant
 author: Vederis Leunardus
 date: 2025-05-03
 version: 1.0
@@ -9,7 +9,7 @@ requirements: mem0ai, pydantic==2.11.4
 """
 
 from typing import ClassVar, List, Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel
 from schemas import OpenAIChatMessage
 from mem0 import MemoryClient
 
@@ -17,10 +17,7 @@ class Pipeline:
     class Valves(BaseModel):
         pipelines: List[str] = ["*"]
         priority: int = 0
-        api_key: str = Field(
-            default="put_api_key_here", 
-            description="mem0 API key for authentication. Must be set in OpenWebUI dashboard."
-        )
+        client: ClassVar[MemoryClient] = MemoryClient(api_key="put_api_key_here")  # ← Replace with your actual mem0 API key!
         user_id: str = "default_user"
         pass
 
@@ -40,8 +37,6 @@ class Pipeline:
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
         """Inject memory context into the prompt before sending to the model."""
         print("DEBUG: Inlet method triggered")
-        self.client = MemoryClient(api_key=self.valves.api_key)  # Create instance-specific client
-
         print(f"Current module: {__name__}")
         print(f"Request body: {body.keys()}")
         print(f"Pipeline ID: {self.valves.pipelines}")
@@ -74,15 +69,15 @@ class Pipeline:
 
         try:
             # Retrieve relevant memories and update memory with current message
-            print("DEBUG: MemoryClient initialized:", self.client)
+            print("DEBUG: MemoryClient initialized:", self.valves.client)
             print("DEBUG: Getting memories...")
-            memories = self.client.search(
+            memories = self.valves.client.search(
                 user_id=current_user_id,
                 query=user_message
             )
             
             # Add current user message to memory
-            self.client.add(
+            self.valves.client.add(
                 user_id=current_user_id,
                 messages=[{"role": "user", "content": user_message}]
             )
