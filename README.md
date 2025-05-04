@@ -1,7 +1,6 @@
 # mem0-owui
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/npm/v/mem0-owui/latest)]
 
 A memory filter integration for OpenWebUI using mem0 to persist and retrieve conversation context.
 
