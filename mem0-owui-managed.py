@@ -107,9 +107,6 @@ class Pipeline:
                     print(f"Memory initialization failed: {str(e)}")
                     memory_context = ""  # Fallback to empty context
 
-            # Add LLM memory generation instructions
-            memory_context += "\n\nAlso, generate a concise memory summary of this interaction for future reference."
-            
             # Find or create system message
             system_message = next((msg for msg in messages if msg["role"] == "system"), None)
             if system_message:
@@ -127,32 +124,4 @@ class Pipeline:
             print(f"Mem0 integration error: {str(e)}")
 
         return body
-
-    async def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        """Process LLM-generated memory from response"""
-        print("DEBUG: Outlet method triggered")
-        try:
-            messages = body.get("messages", [])
-            assistant_response = next((msg["content"] for msg in reversed(messages) if msg.get("role") == "assistant"), None)
-            
-            if assistant_response:
-                # Extract memory content from response (look for specific memory markers)
-                memory_start = assistant_response.find("MEMORY_SUMMARY_START")
-                memory_end = assistant_response.find("MEMORY_SUMMARY_END")
-                
-                if memory_start != -1 and memory_end != -1:
-                    memory_content = assistant_response[memory_start + len("MEMORY_SUMMARY_START"):memory_end].strip()
-                    # Add basic validation for memory content
-                    if len(memory_content) > 20:  # Simple quality check
-                        current_user_id = user["id"] if user and "id" in user else self.valves.user_id
-                        self.valves.client.add(
-                            user_id=current_user_id,
-                            messages=[{"role": "system", "content": memory_content}],
-                            metadata={"type": "generated_memory"},
-                            infer=False
-                        )
-                        print(f"Stored LLM-generated memory: {memory_content[:50]}...")
-        except Exception as e:
-            print(f"Memory storage error: {str(e)}")
-            
-        return body
+    
