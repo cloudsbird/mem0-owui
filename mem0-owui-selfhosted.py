@@ -8,6 +8,7 @@ description: Filter that works with mem0
 requirements: mem0ai==0.1.96, pydantic==2.7.4
 """
 
+import os
 from typing import ClassVar, List, Optional
 from pydantic import BaseModel, Field, model_validator
 from schemas import OpenAIChatMessage
@@ -18,12 +19,33 @@ class Pipeline:
     class Valves(BaseModel):
         pipelines: List[str] = ["*"]
         priority: int = 0
-        user_id: str = "default_user"
-        pass
+        user_id: str = Field(default="default_user", description="Default user ID for memory operations")
+        
+        # Vector store config
+        qdrant_host: str = Field(default="qdrant", description="Qdrant vector database host")
+        qdrant_port: str = Field(default="6333", description="Qdrant vector database port")
+        collection_name: str = Field(default="mem1024", description="Qdrant collection name")
+        embedding_model_dims: int = Field(default=1024, description="Embedding model dimensions")
+        on_disk: bool = Field(default=True, description="Store vectors on disk")
+
+        # LLM config
+        llm_provider: str = Field(default="openai", description="LLM provider (openai, etc)")
+        llm_api_key: str = Field(default="", description="LLM API key")
+        llm_model: str = Field(default="meta-llama/llama-4-scout:nitro", description="LLM model name")
+        llm_base_url: str = Field(default="https://openrouter.ai/api/v1", description="LLM API base URL")
+
+        # Embedder config
+        embedder_provider: str = Field(default="lmstudio", description="Embedding provider")
+        embedder_base_url: str = Field(default="http://vllm:8000/v1", description="Embedding API base URL")
+        embedder_api_key: str = Field(default="", description="Embedding API key")
+        embedder_model: str = Field(default="BAAI/bge-m3", description="Embedding model name")
 
     def __init__(self):
         self.type = "filter"
-        self.valves = self.Valves(**{"pipelines": ["*"]})
+        self.valves = self.Valves(
+            **{k: os.getenv(k, v.default) 
+               for k, v in self.Valves.model_fields.items()}
+        )
         print("initializing mem0 client")
         self.m = self.init_mem_zero()
         print("mem0 client initialized")
@@ -138,33 +160,32 @@ class Pipeline:
             "vector_store": {
                 "provider": "qdrant",
                 "config": {
-                    "host": "qdrant",
-                    "port": "6333",
-                    "collection_name": "mem1024",
-                    "embedding_model_dims": 1024,
-                    "on_disk": True,
+                    "host": self.valves.qdrant_host,
+                    "port": self.valves.qdrant_port,
+                    "collection_name": self.valves.collection_name,
+                    "embedding_model_dims": self.valves.embedding_model_dims,
+                    "on_disk": self.valves.on_disk,
                 },
             },
             "llm": {
-                "provider": "openai",
+                "provider": self.valves.llm_provider,
                 "config": {
-                    "api_key": "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",
-                    "model": "meta-llama/llama-4-scout:nitro",
-                    "openai_base_url": "https://openrouter.ai/api/v1",
+                    "api_key": self.valves.llm_api_key,
+                    "model": self.valves.llm_model,
+                    "openai_base_url": self.valves.llm_base_url,
                 },
             },
             "embedder": {
-                "provider": "lmstudio",
+                "provider": self.valves.embedder_provider,
                 "config": {
-                    "lmstudio_base_url": "http://vllm:8000/v1",
-                    "api_key": "eyJhbGciOiJIUzI1NiIsImtpZCI6IlV6SXJWd1h0dnprLVRvdzlLZWstc0M1akptWXBvX1VaVkxUZlpnMDRlOFUiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJnaXRodWJ8ODY0MzQ1NyIsInNjb3BlIjoib3BlbmlkIG9mZmxpbmVfYWNjZXNzIiwiaXNzIjoiYXBpX2tleV9pc3N1ZXIiLCJhdWQiOlsiaHR0cHM6Ly9uZWJpdXMtaW5mZXJlbmNlLmV1LmF1dGgwLmNvbS9hcGkvdjIvIl0sImV4cCI6MTg5NjM2MzU0OSwidXVpZCI6ImMwZDA2MWQ3LWNhNzMtNDU1YS1iMTA4LWMwNjhjZDFmOGEyNCIsIm5hbWUiOiJPcGVuV2ViVUkiLCJleHBpcmVzX2F0IjoiMjAzMC0wMi0wM1QxNTozOTowOSswMDAwIn0.Ig4Kr8Szw6Sl5hFwZpZU2dVbP6IxdPP4N87_1BfBpEM",
-                    "model": "BAAI/bge-m3",
-                    "embedding_dims": "1024",
+                    "lmstudio_base_url": self.valves.embedder_base_url,
+                    "api_key": self.valves.embedder_api_key,
+                    "model": self.valves.embedder_model,
+                    "embedding_dims": str(self.valves.embedding_model_dims),
                 },
             },
         }
 
-        print("embeddings_dims")
-
+        print("Initializing memory with config:", config)
         return Memory.from_config(config)
 
