@@ -1,29 +1,29 @@
 """
-title: mem0-owui-qdrant
+title: mem0-owui-self-hosted
 author: Vederis Leunardus
 date: 2025-05-03
 version: 1.0
 license: MIT
 description: Filter that works with mem0
-requirements: mem0ai, pydantic==2.11.4
+requirements: mem0ai, pydantic==2.11.4, langchain-neo4j, rank_bm25
 """
 
 from typing import ClassVar, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from schemas import OpenAIChatMessage
-from mem0 import MemoryClient
+from mem0 import Memory
 
 class Pipeline:
     class Valves(BaseModel):
         pipelines: List[str] = ["*"]
         priority: int = 0
-        client: ClassVar[MemoryClient] = MemoryClient(api_key="put_api_key_here")  # ← Replace with your actual mem0 API key!
         user_id: str = "default_user"
         pass
 
     def __init__(self):
         self.type = "filter"
         self.valves = self.Valves(**{"pipelines": ["*"]})
+        self.m = self.init_mem_zero()
         pass
 
     async def on_startup(self):
@@ -37,6 +37,7 @@ class Pipeline:
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
         """Inject memory context into the prompt before sending to the model."""
         print("DEBUG: Inlet method triggered")
+
         print(f"Current module: {__name__}")
         print(f"Request body: {body.keys()}")
         print(f"Pipeline ID: {self.valves.pipelines}")
@@ -69,15 +70,15 @@ class Pipeline:
 
         try:
             # Retrieve relevant memories and update memory with current message
-            print("DEBUG: MemoryClient initialized:", self.valves.client)
+            print("DEBUG: MemoryClient initialized:", self.m)
             print("DEBUG: Getting memories...")
-            memories = self.valves.client.search(
+            memories = self.m.search(
                 user_id=current_user_id,
                 query=user_message
             )
             
             # Add current user message to memory
-            self.valves.client.add(
+            self.m.add(
                 user_id=current_user_id,
                 messages=[{"role": "user", "content": user_message}]
             )
@@ -87,14 +88,14 @@ class Pipeline:
             # Inject memory context into system message
             if memories:
                 memory_context = "\n\nRelevant memories:\n" + "\n".join(
-                    f"- {mem['memory']}" for mem in memories
+                    f"- {mem['memory']}" for mem in memories['results']
                 )
             else:
                 # Initialize memory for new users
                 try:
-                    self.valves.client.add(
+                    self.m.add(
                         user_id=current_user_id,
-                        messages="System: This is a new user conversation"
+                        messages=[{"role": "user", "content": "System: This is a new user conversation"}]
                     )
                     # Set default context after initialization
                     memory_context = "\n\nDefault memory initialized for new user conversation"
@@ -140,7 +141,7 @@ class Pipeline:
                     # Add basic validation for memory content
                     if len(memory_content) > 20:  # Simple quality check
                         current_user_id = user["id"] if user and "id" in user else self.valves.user_id
-                        self.valves.client.add(
+                        self.m.add(
                             user_id=current_user_id,
                             messages=[{"role": "system", "content": memory_content}],
                             metadata={"type": "generated_memory"},
@@ -151,3 +152,30 @@ class Pipeline:
             print(f"Memory storage error: {str(e)}")
             
         return body
+    
+    def init_mem_zero(self):
+        config = {
+            "vector_store": {
+                "provider": "qdrant",
+                "config": {
+                    "host": "qdrant",
+                    "port": "6333",
+                },
+            },
+            "llm": {
+                "provider": "openai",
+                "config": {
+                    "api_key": "open_ai_key",
+                    "model":"select your own open ai model",
+                },
+            },
+            "embedder": {
+                "provider": "openai",
+                "config": {
+                    "api_key": "open_ai_key",
+                    "model":"select your own open ai model",
+                },
+            },
+        }
+
+        return Memory.from_config(config)
