@@ -12,7 +12,7 @@ import os
 from typing import ClassVar, List, Optional
 from pydantic import BaseModel, Field, model_validator
 from schemas import OpenAIChatMessage
-from mem0 import Memory
+from mem0 import AsyncMemory
 
 
 class Pipeline:
@@ -69,16 +69,12 @@ class Pipeline:
         self.valves = self.Valves(
             **{k: os.getenv(k, v.default) for k, v in self.Valves.model_fields.items()}
         )
-        print("initializing mem0 client")
-        print(self.valves)
-        self.m = self.init_mem_zero()
-        print("mem0 client initialized")
         pass
 
     async def on_valves_updated(self):
         print("initializing mem0 client")
         print(self.valves)
-        self.m = self.init_mem_zero()
+        self.m = await self.init_mem_zero()
         print("mem0 client initialized")
 
     async def on_startup(self):
@@ -91,6 +87,11 @@ class Pipeline:
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
         """Inject memory context into the prompt before sending to the model."""
+
+        if self.m is None:
+            print("Initializing mem0 client")
+            self.m = await self.init_mem_zero()
+
         print("DEBUG: Inlet method triggered")
 
         print(f"Current module: {__name__}")
@@ -136,7 +137,7 @@ class Pipeline:
             # Retrieve relevant memories and update memory with current message
             print("DEBUG: MemoryClient initialized:", self.m)
             print("DEBUG: Getting memories...")
-            memories = self.m.search(user_id=current_user_id, query=user_message)
+            memories = await self.m.search(user_id=current_user_id, query=user_message)
 
             if assistant_message:
                 self.m.add(
@@ -185,7 +186,7 @@ class Pipeline:
 
         return body
 
-    def init_mem_zero(self):
+    async def init_mem_zero(self):
         config = {
             "vector_store": {
                 "provider": "qdrant",
@@ -217,4 +218,4 @@ class Pipeline:
         }
 
         print("Initializing memory with config:", config)
-        return Memory.from_config(config)
+        return await AsyncMemory.from_config(config)
