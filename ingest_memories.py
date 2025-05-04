@@ -17,7 +17,7 @@ from mem0 import AsyncMemory
 # --- Configuration (Read from Environment Variables) ---
 
 # Vector store config
-QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = os.getenv("QDRANT_PORT", "6333")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "mem1024")
 EMBEDDING_MODEL_DIMS = int(os.getenv("EMBEDDING_MODEL_DIMS", 1024))
@@ -31,7 +31,7 @@ LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1")
 
 # Embedder config
 EMBEDDER_PROVIDER = os.getenv("EMBEDDER_PROVIDER", "lmstudio")
-EMBEDDER_BASE_URL = os.getenv("EMBEDDER_BASE_URL", "http://vllm:8000/v1")
+EMBEDDER_BASE_URL = os.getenv("EMBEDDER_BASE_URL", "http://localhost:8000/v1")
 EMBEDDER_API_KEY = os.getenv("EMBEDDER_API_KEY", "placeholder")
 EMBEDDER_MODEL = os.getenv("EMBEDDER_MODEL", "BAAI/bge-m3")
 
@@ -69,9 +69,13 @@ async def init_mem_zero() -> AsyncMemory:
     }
     print("Initializing mem0 client with config:")
     # Avoid printing sensitive keys like api_key directly
-    print(f"  Vector Store: provider=qdrant, host={QDRANT_HOST}, port={QDRANT_PORT}, collection={COLLECTION_NAME}")
+    print(
+        f"  Vector Store: provider=qdrant, host={QDRANT_HOST}, port={QDRANT_PORT}, collection={COLLECTION_NAME}"
+    )
     print(f"  LLM: provider={LLM_PROVIDER}, model={LLM_MODEL}, base_url={LLM_BASE_URL}")
-    print(f"  Embedder: provider={EMBEDDER_PROVIDER}, model={EMBEDDER_MODEL}, base_url={EMBEDDER_BASE_URL}")
+    print(
+        f"  Embedder: provider={EMBEDDER_PROVIDER}, model={EMBEDDER_MODEL}, base_url={EMBEDDER_BASE_URL}"
+    )
 
     try:
         memory = await AsyncMemory.from_config(config)
@@ -82,7 +86,9 @@ async def init_mem_zero() -> AsyncMemory:
         raise
 
 
-def extract_messages_and_user_id_from_json(file_path: str) -> Tuple[Optional[str], List[Dict[str, str]]]:
+def extract_messages_and_user_id_from_json(
+    file_path: str,
+) -> Tuple[Optional[str], List[Dict[str, str]]]:
     """Loads JSON data, extracts user/assistant messages, and the user ID."""
     print(f"Loading chat history from {file_path}...")
     user_id = None
@@ -117,18 +123,20 @@ def extract_messages_and_user_id_from_json(file_path: str) -> Tuple[Optional[str
         try:
             # Ensure the session is a dictionary before accessing keys
             if not isinstance(session, dict):
-                print(f"Warning: Session {i+1} is not a dictionary. Skipping.")
+                print(f"Warning: Session {i + 1} is not a dictionary. Skipping.")
                 continue
 
             # Extract user_id if not already found (though typically it's per-session)
             # If consistency is needed, you might want to check if user_id differs across sessions.
             if not user_id and "user_id" in session:
-                 user_id = session["user_id"]
-                 print(f"Extracted user_id from session {i+1}: {user_id}")
+                user_id = session["user_id"]
+                print(f"Extracted user_id from session {i + 1}: {user_id}")
             messages_dict = session["chat"]["history"]["messages"]
             session_messages = []
             # Sort messages by timestamp to maintain order, assuming timestamp exists and is reliable
-            sorted_message_items = sorted(messages_dict.items(), key=lambda item: item[1].get("timestamp", 0))
+            sorted_message_items = sorted(
+                messages_dict.items(), key=lambda item: item[1].get("timestamp", 0)
+            )
 
             for _, msg_data in sorted_message_items:
                 role = msg_data.get("role")
@@ -137,15 +145,19 @@ def extract_messages_and_user_id_from_json(file_path: str) -> Tuple[Optional[str
                     session_messages.append({"role": role, "content": content})
 
             if session_messages:
-                print(f"  Extracted {len(session_messages)} user/assistant messages from session {i+1}.")
+                print(
+                    f"  Extracted {len(session_messages)} user/assistant messages from session {i + 1}."
+                )
                 all_messages.extend(session_messages)
             else:
-                print(f"  No user/assistant messages found in session {i+1}.")
+                print(f"  No user/assistant messages found in session {i + 1}.")
 
         except KeyError as e:
-            print(f"Warning: Could not find expected key {e} in session {i+1}. Skipping.")
+            print(
+                f"Warning: Could not find expected key {e} in session {i + 1}. Skipping."
+            )
         except Exception as e:
-            print(f"Warning: Error processing session {i+1}: {e}. Skipping.")
+            print(f"Warning: Error processing session {i + 1}: {e}. Skipping.")
 
     print(f"Total extracted messages: {len(all_messages)}")
     return user_id, all_messages
