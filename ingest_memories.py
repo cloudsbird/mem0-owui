@@ -86,81 +86,87 @@ async def init_mem_zero() -> AsyncMemory:
         raise
 
 
-def extract_messages_and_user_id_from_json(
+def extract_sessions_from_json(
     file_path: str,
-) -> Tuple[Optional[str], List[Dict[str, str]]]:
-    """Loads JSON data, extracts user/assistant messages, and the user ID."""
+) -> List[Tuple[Optional[str], List[Dict[str, str]]]]:
+    """Loads JSON data and extracts user ID and messages for each session."""
     print(f"Loading chat history from {file_path}...")
-    user_id = None
-    all_messages = []
+    sessions_data = []
     try:
         with open(file_path, "r") as f:
             data = json.load(f)
     except FileNotFoundError:
         print(f"Error: File not found at {file_path}")
-        return None, []
+        return []
     except json.JSONDecodeError:
         print(f"Error: Could not decode JSON from {file_path}")
-        return None, []
+        return []
 
-    if not isinstance(data, list) or not data:
-        print("Error: Expected JSON data to be a non-empty list of chat sessions.")
-        return None, []
+    if not isinstance(data, list):
+        print("Error: Expected JSON data to be a list of chat sessions.")
+        return []
+
+    if not data:
+        print("Warning: JSON file contains an empty list. No sessions to process.")
+        return []
 
     print(f"Found {len(data)} chat session(s) in the export.")
 
-    # Attempt to extract user_id from the first session
-    try:
-        user_id = data[0].get("user_id")
-        if user_id:
-            print(f"Extracted user_id: {user_id}")
-        else:
-            print("Warning: Could not find 'user_id' in the first session.")
-    except (KeyError, IndexError):
-        print("Warning: Could not access the first session or 'user_id' key.")
-
     for i, session in enumerate(data):
+        session_user_id = None
+        session_messages = []
         try:
             # Ensure the session is a dictionary before accessing keys
             if not isinstance(session, dict):
                 print(f"Warning: Session {i + 1} is not a dictionary. Skipping.")
                 continue
 
-            # Extract user_id if not already found (though typically it's per-session)
-            # If consistency is needed, you might want to check if user_id differs across sessions.
-            if not user_id and "user_id" in session:
-                user_id = session["user_id"]
-                print(f"Extracted user_id from session {i + 1}: {user_id}")
-            messages_dict = session["chat"]["history"]["messages"]
-            session_messages = []
-            # Sort messages by timestamp to maintain order, assuming timestamp exists and is reliable
-            sorted_message_items = sorted(
-                messages_dict.items(), key=lambda item: item[1].get("timestamp", 0)
-            )
+            # Extract user_id for this specific session
+            session_user_id = session.get("user_id")
+            if not session_user_id:
+                print(f"Warning: Could not find 'user_id' in session {i + 1}. Skipping ingestion for this session.")
+                continue # Skip if no user_id for this session
+            messages_dict = session.get("chat", {}).get("history", {}).get("messages", {})
+            if not messages_dict:
+                print(f"Warning: No messages found in session {i + 1} under chat.history.messages. Skipping.")
+                continue
+
+            # Sort messages by timestamp to maintain order
+            try:
+                sorted_message_items = sorted(
+                    messages_dict.items(), key=lambda item: item[1].get("timestamp", 0)
+                )
+            except AttributeError:
+                 print(f"Warning: Messages in session {i + 1} are not in the expected format (dict of dicts). Skipping.")
+                 continue
 
             for _, msg_data in sorted_message_items:
+                if not isinstance(msg_data, dict):
+                    print(f"Warning: Message data is not a dictionary in session {i + 1}. Skipping message.")
+                    continue
                 role = msg_data.get("role")
                 content = msg_data.get("content")
                 if role in ["user", "assistant"] and content:
                     session_messages.append({"role": role, "content": content})
 
-            if session_messages:
+            if session_user_id and session_messages:
                 print(
-                    f"  Extracted {len(session_messages)} user/assistant messages from session {i + 1}."
+                    f"  Prepared session {i + 1} for user '{session_user_id}' with {len(session_messages)} messages."
                 )
-                all_messages.extend(session_messages)
-            else:
-                print(f"  No user/assistant messages found in session {i + 1}.")
+                sessions_data.append((session_user_id, session_messages))
+            elif session_user_id:
+                 print(f"  No valid user/assistant messages extracted for session {i + 1} (User: {session_user_id}).")
+            # Case where session_user_id was missing is handled earlier
 
         except KeyError as e:
             print(
-                f"Warning: Could not find expected key {e} in session {i + 1}. Skipping."
+                f"Warning: Could not find expected key {e} in session {i + 1}. Skipping this session."
             )
         except Exception as e:
-            print(f"Warning: Error processing session {i + 1}: {e}. Skipping.")
+            print(f"Warning: Error processing session {i + 1}: {e}. Skipping this session.")
 
-    print(f"Total extracted messages: {len(all_messages)}")
-    return user_id, all_messages
+    print(f"Successfully prepared {len(sessions_data)} sessions for ingestion.")
+    return sessions_data
 
 
 async def main():
@@ -175,14 +181,10 @@ async def main():
     )
     args = parser.parse_args()
 
-    user_id, messages = extract_messages_and_user_id_from_json(args.file)
+    extracted_sessions = extract_sessions_from_json(args.file)
 
-    if not user_id:
-        print("Could not extract user ID from the file. Exiting.")
-        return
-
-    if not messages:
-        print("No messages extracted or file format error. Exiting.")
+    if not extracted_sessions:
+        print("No valid sessions extracted from the file. Exiting.")
         return
 
     try:
@@ -191,13 +193,29 @@ async def main():
         print("Failed to initialize mem0 client. Exiting.")
         return
 
-    print(f"Ingesting {len(messages)} messages for user '{user_id}'...")
-    try:
-        # Consider batching if there are a very large number of messages
-        await mem0_client.add(messages=messages, user_id=user_id)
-        print("Ingestion complete.")
-    except Exception as e:
-        print(f"Error during mem0 ingestion: {e}")
+    ingested_count = 0
+    failed_count = 0
+    for session_user_id, session_messages in extracted_sessions:
+        # Double check, though extraction function should ensure these are present
+        if not session_user_id or not session_messages:
+            print("Skipping session due to missing user ID or messages (should not happen here).")
+            failed_count += 1
+            continue
+
+        print(f"Ingesting session for user '{session_user_id}' ({len(session_messages)} messages)...")
+        try:
+            # Ingest messages for the current session
+            await mem0_client.add(messages=session_messages, user_id=session_user_id)
+            print(f"  Successfully ingested session for user '{session_user_id}'.")
+            ingested_count += 1
+        except Exception as e:
+            print(f"  Error during mem0 ingestion for user '{session_user_id}': {e}")
+            failed_count += 1
+
+    print("\n--- Ingestion Summary ---")
+    print(f"Successfully ingested sessions: {ingested_count}")
+    print(f"Failed to ingest sessions: {failed_count}")
+    print(f"Total sessions processed: {len(extracted_sessions)}")
 
 
 if __name__ == "__main__":
