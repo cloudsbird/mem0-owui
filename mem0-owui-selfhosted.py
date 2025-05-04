@@ -19,37 +19,67 @@ class Pipeline:
     class Valves(BaseModel):
         pipelines: List[str] = ["*"]
         priority: int = 0
-        user_id: str = Field(default="default_user", description="Default user ID for memory operations")
-        
+        user_id: str = Field(
+            default="default_user", description="Default user ID for memory operations"
+        )
+
         # Vector store config
-        qdrant_host: str = Field(default="qdrant", description="Qdrant vector database host")
-        qdrant_port: str = Field(default="6333", description="Qdrant vector database port")
-        collection_name: str = Field(default="mem1024", description="Qdrant collection name")
-        embedding_model_dims: int = Field(default=1024, description="Embedding model dimensions")
+        qdrant_host: str = Field(
+            default="qdrant", description="Qdrant vector database host"
+        )
+        qdrant_port: str = Field(
+            default="6333", description="Qdrant vector database port"
+        )
+        collection_name: str = Field(
+            default="mem1024", description="Qdrant collection name"
+        )
+        embedding_model_dims: int = Field(
+            default=1024, description="Embedding model dimensions"
+        )
         on_disk: bool = Field(default=True, description="Store vectors on disk")
 
         # LLM config
-        llm_provider: str = Field(default="openai", description="LLM provider (openai, etc)")
-        llm_api_key: str = Field(default="", description="LLM API key")
-        llm_model: str = Field(default="meta-llama/llama-4-scout:nitro", description="LLM model name")
-        llm_base_url: str = Field(default="https://openrouter.ai/api/v1", description="LLM API base URL")
+        llm_provider: str = Field(
+            default="openai", description="LLM provider (openai, etc)"
+        )
+        llm_api_key: str = Field(default="placeholder", description="LLM API key")
+        llm_model: str = Field(
+            default="meta-llama/llama-4-scout:nitro", description="LLM model name"
+        )
+        llm_base_url: str = Field(
+            default="https://openrouter.ai/api/v1", description="LLM API base URL"
+        )
 
         # Embedder config
-        embedder_provider: str = Field(default="lmstudio", description="Embedding provider")
-        embedder_base_url: str = Field(default="http://vllm:8000/v1", description="Embedding API base URL")
-        embedder_api_key: str = Field(default="", description="Embedding API key")
-        embedder_model: str = Field(default="BAAI/bge-m3", description="Embedding model name")
+        embedder_provider: str = Field(
+            default="lmstudio", description="Embedding provider"
+        )
+        embedder_base_url: str = Field(
+            default="http://vllm:8000/v1", description="Embedding API base URL"
+        )
+        embedder_api_key: str = Field(
+            default="placeholder", description="Embedding API key"
+        )
+        embedder_model: str = Field(
+            default="BAAI/bge-m3", description="Embedding model name"
+        )
 
     def __init__(self):
         self.type = "filter"
         self.valves = self.Valves(
-            **{k: os.getenv(k, v.default) 
-               for k, v in self.Valves.model_fields.items()}
+            **{k: os.getenv(k, v.default) for k, v in self.Valves.model_fields.items()}
         )
         print("initializing mem0 client")
+        print(self.valves)
         self.m = self.init_mem_zero()
         print("mem0 client initialized")
         pass
+
+    async def on_valves_updated(self):
+        print("initializing mem0 client")
+        print(self.valves)
+        self.m = self.init_mem_zero()
+        print("mem0 client initialized")
 
     async def on_startup(self):
         print(f"on_startup:{__name__}")
@@ -188,4 +218,3 @@ class Pipeline:
 
         print("Initializing memory with config:", config)
         return Memory.from_config(config)
-
