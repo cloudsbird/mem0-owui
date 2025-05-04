@@ -13,6 +13,7 @@ from typing import ClassVar, List, Optional
 from pydantic import BaseModel, Field, model_validator
 from schemas import OpenAIChatMessage
 from mem0 import AsyncMemory
+import asyncio
 
 
 class Pipeline:
@@ -85,6 +86,10 @@ class Pipeline:
         print(f"on_shutdown:{__name__}")
         pass
 
+    async def add_message_to_mem0(self, user_id, message):
+        await self.m.add(user_id=user_id, messages=[message])
+        print(f"Added message to mem0: {message}")
+
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
         """Inject memory context into the prompt before sending to the model."""
 
@@ -140,19 +145,19 @@ class Pipeline:
             memories = await self.m.search(user_id=current_user_id, query=user_message)
 
             if assistant_message:
-                self.m.add(
-                    user_id=current_user_id,
-                    messages=[
+                asyncio.create_task(
+                    self.add_message_to_mem0(
+                        current_user_id,
                         {"role": "assistant", "content": assistant_message},
-                    ],
+                    )
                 )
 
             # Add current user message to memory
-            self.m.add(
-                user_id=current_user_id,
-                messages=[
-                    {"role": "user", "content": user_message},
-                ],
+            asyncio.create_task(
+                self.add_message_to_mem0(
+                    user_id=current_user_id,
+                    message={"role": "user", "content": user_message},
+                )
             )
 
             print("DEBUG: Retrieved memories:", memories)
