@@ -124,11 +124,17 @@ def extract_sessions_from_json(
             # Extract user_id for this specific session
             session_user_id = session.get("user_id")
             if not session_user_id:
-                print(f"Warning: Could not find 'user_id' in session {i + 1}. Skipping ingestion for this session.")
-                continue # Skip if no user_id for this session
-            messages_dict = session.get("chat", {}).get("history", {}).get("messages", {})
+                print(
+                    f"Warning: Could not find 'user_id' in session {i + 1}. Skipping ingestion for this session."
+                )
+                continue  # Skip if no user_id for this session
+            messages_dict = (
+                session.get("chat", {}).get("history", {}).get("messages", {})
+            )
             if not messages_dict:
-                print(f"Warning: No messages found in session {i + 1} under chat.history.messages. Skipping.")
+                print(
+                    f"Warning: No messages found in session {i + 1} under chat.history.messages. Skipping."
+                )
                 continue
 
             # Sort messages by timestamp to maintain order
@@ -137,12 +143,16 @@ def extract_sessions_from_json(
                     messages_dict.items(), key=lambda item: item[1].get("timestamp", 0)
                 )
             except AttributeError:
-                 print(f"Warning: Messages in session {i + 1} are not in the expected format (dict of dicts). Skipping.")
-                 continue
+                print(
+                    f"Warning: Messages in session {i + 1} are not in the expected format (dict of dicts). Skipping."
+                )
+                continue
 
             for _, msg_data in sorted_message_items:
                 if not isinstance(msg_data, dict):
-                    print(f"Warning: Message data is not a dictionary in session {i + 1}. Skipping message.")
+                    print(
+                        f"Warning: Message data is not a dictionary in session {i + 1}. Skipping message."
+                    )
                     continue
                 role = msg_data.get("role")
                 content = msg_data.get("content")
@@ -155,7 +165,9 @@ def extract_sessions_from_json(
                 )
                 sessions_data.append((session_user_id, session_messages))
             elif session_user_id:
-                 print(f"  No valid user/assistant messages extracted for session {i + 1} (User: {session_user_id}).")
+                print(
+                    f"  No valid user/assistant messages extracted for session {i + 1} (User: {session_user_id})."
+                )
             # Case where session_user_id was missing is handled earlier
 
         except KeyError as e:
@@ -163,7 +175,9 @@ def extract_sessions_from_json(
                 f"Warning: Could not find expected key {e} in session {i + 1}. Skipping this session."
             )
         except Exception as e:
-            print(f"Warning: Error processing session {i + 1}: {e}. Skipping this session.")
+            print(
+                f"Warning: Error processing session {i + 1}: {e}. Skipping this session."
+            )
 
     print(f"Successfully prepared {len(sessions_data)} sessions for ingestion.")
     return sessions_data
@@ -198,11 +212,15 @@ async def main():
     for session_user_id, session_messages in extracted_sessions:
         # Double check, though extraction function should ensure these are present
         if not session_user_id or not session_messages:
-            print("Skipping session due to missing user ID or messages (should not happen here).")
+            print(
+                "Skipping session due to missing user ID or messages (should not happen here)."
+            )
             failed_count += 1
             continue
 
-        print(f"Ingesting session for user '{session_user_id}' ({len(session_messages)} messages)...")
+        print(
+            f"Ingesting session for user '{session_user_id}' ({len(session_messages)} messages)..."
+        )
         try:
             # Ingest messages for the current session
             await mem0_client.add(messages=session_messages, user_id=session_user_id)
