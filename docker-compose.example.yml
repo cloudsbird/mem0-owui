@@ -1,0 +1,44 @@
+services:
+  open-webui:
+    image: 'ghcr.io/open-webui/open-webui:main'
+    volumes:
+      - 'open-webui:/app/backend/data'
+    environment:
+      - SERVICE_FQDN_OPENWEBUI_8080
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://127.0.0.1:8080'
+      interval: 5s
+      timeout: 30s
+      retries: 10
+  pipelines:
+      image: ghcr.io/open-webui/pipelines:main
+      volumes:
+        - pipelines:/app/pipelines
+      restart: always
+      environment:
+        - PIPELINES_API_KEY=put_your_key here
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: always
+    container_name: qdrant
+    volumes:
+      - qdrant_data:/qdrant/storage
+  neo4j:
+    image: neo4j:latest
+    volumes:
+        - neo4j_logs:/logs
+        - neo4j_config:/config
+        - neo4j_data_new:/data
+        - neo4j_plugins:/plugins
+    environment:
+        - NEO4J_AUTH=neo4j/your_password
+    restart: always
+volumes:
+  open-webui: 
+  mcpo_config:
+  pipelines:
+  qdrant_data:
