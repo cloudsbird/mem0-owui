@@ -66,6 +66,7 @@ class Pipeline:
         self.valves = self.Valves(
             **{k: os.getenv(k, v.default) for k, v in self.Valves.model_fields.items()}
         )
+        self.m = None  # Initialize self.m to None
         pass
 
     async def on_valves_updated(self):
