@@ -88,8 +88,6 @@ mem0-owui provides two deployment options:
 | `qdrant_host` | ✅ | "qdrant" | Qdrant vector database host |
 | `qdrant_port` | ✅ | "6333" | Qdrant vector database port |
 | `collection_name` | ✅ | "mem1024" | Qdrant collection name |
-| `embedding_model_dims` | ✅ | 1024 | Embedding model dimensions |
-| `on_disk` | ✅ | true | Store vectors on disk |
 
 #### LLM Configuration
 
@@ -97,17 +95,17 @@ mem0-owui provides two deployment options:
 |----------|----------|---------|-------------|
 | `llm_provider` | ✅ | "openai" | LLM provider (openai, etc) |
 | `llm_api_key` | ✅ | "placeholder" | LLM API key |
-| `llm_model` | ✅ | "meta-llama/llama-4-scout:nitro" | LLM model name |
+| `llm_model` | ✅ | "GPT-4.1" | LLM model name |
 | `llm_base_url` | ✅ | "https://openrouter.ai/api/v1" | LLM API base URL |
 
 #### Embedder Configuration
 
 | Parameter | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `embedder_provider` | ✅ | "lmstudio" | Embedding provider |
-| `embedder_base_url` | ✅ | "http://vllm:8000/v1" | Embedding API base URL |
+| `embedder_provider` | ✅ | "openai" | Embedding provider |
+| `embedder_base_url` | ✅ | "https://openrouter.ai/api/v1" | Embedding API base URL |
 | `embedder_api_key` | ✅ | "placeholder" | Embedding API key |
-| `embedder_model` | ✅ | "BAAI/bge-m3" | Embedding model name |
+| `embedder_model` | ✅ | "text-embedding-3-small" | Embedding model name |
 
 ## How It Works
 

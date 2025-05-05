@@ -34,10 +34,6 @@ class Pipeline:
         collection_name: str = Field(
             default="mem1024", description="Qdrant collection name"
         )
-        embedding_model_dims: int = Field(
-            default=1024, description="Embedding model dimensions"
-        )
-        on_disk: bool = Field(default=True, description="Store vectors on disk")
 
         # LLM config
         llm_provider: str = Field(
@@ -45,7 +41,7 @@ class Pipeline:
         )
         llm_api_key: str = Field(default="placeholder", description="LLM API key")
         llm_model: str = Field(
-            default="meta-llama/llama-4-scout:nitro", description="LLM model name"
+            default="GPT-4.1", description="LLM model name"
         )
         llm_base_url: str = Field(
             default="https://openrouter.ai/api/v1", description="LLM API base URL"
@@ -53,16 +49,16 @@ class Pipeline:
 
         # Embedder config
         embedder_provider: str = Field(
-            default="lmstudio", description="Embedding provider"
+            default="openai", description="Embedding provider"
         )
         embedder_base_url: str = Field(
-            default="http://vllm:8000/v1", description="Embedding API base URL"
+            default="https://openrouter.ai/api/v1", description="Embedding API base URL"
         )
         embedder_api_key: str = Field(
             default="placeholder", description="Embedding API key"
         )
         embedder_model: str = Field(
-            default="BAAI/bge-m3", description="Embedding model name"
+            default="text-embedding-3-small", description="Embedding model name"
         )
 
     def __init__(self):
@@ -199,8 +195,6 @@ class Pipeline:
                     "host": self.valves.qdrant_host,
                     "port": self.valves.qdrant_port,
                     "collection_name": self.valves.collection_name,
-                    "embedding_model_dims": self.valves.embedding_model_dims,
-                    "on_disk": self.valves.on_disk,
                 },
             },
             "llm": {
@@ -217,7 +211,6 @@ class Pipeline:
                     "lmstudio_base_url": self.valves.embedder_base_url,
                     "api_key": self.valves.embedder_api_key,
                     "model": self.valves.embedder_model,
-                    "embedding_dims": str(self.valves.embedding_model_dims),
                 },
             },
         }
