@@ -87,7 +87,7 @@ mem0-owui provides two deployment options:
 |----------|----------|---------|-------------|
 | `qdrant_host` | ✅ | "qdrant" | Qdrant vector database host |
 | `qdrant_port` | ✅ | "6333" | Qdrant vector database port |
-| `collection_name` | ✅ | "mem1024" | Qdrant collection name |
+| `collection_name` | ✅ | "mem1536" | Qdrant collection name |
 
 #### LLM Configuration
 

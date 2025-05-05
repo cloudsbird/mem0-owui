@@ -32,7 +32,7 @@ class Pipeline:
             default="6333", description="Qdrant vector database port"
         )
         collection_name: str = Field(
-            default="mem1024", description="Qdrant collection name"
+            default="mem1536", description="Qdrant collection name for 1536-dimensional vectors"
         )
 
         # LLM config
@@ -209,7 +209,7 @@ class Pipeline:
             "embedder": {
                 "provider": self.valves.embedder_provider,
                 "config": {
-                    "lmstudio_base_url": self.valves.embedder_base_url,
+                    "openai_base_url": self.valves.embedder_base_url,
                     "api_key": self.valves.embedder_api_key,
                     "model": self.valves.embedder_model,
                 },
