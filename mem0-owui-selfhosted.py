@@ -34,9 +34,6 @@ class Pipeline:
         collection_name: str = Field(
             default="mem1024", description="Qdrant collection name"
         )
-        embedding_model_dims: int = Field(
-            default=1024, description="Embedding model dimensions"
-        )
         on_disk: bool = Field(default=True, description="Store vectors on disk")
 
         # LLM config
@@ -199,7 +196,6 @@ class Pipeline:
                     "host": self.valves.qdrant_host,
                     "port": self.valves.qdrant_port,
                     "collection_name": self.valves.collection_name,
-                    "embedding_model_dims": self.valves.embedding_model_dims,
                     "on_disk": self.valves.on_disk,
                 },
             },
@@ -217,7 +213,6 @@ class Pipeline:
                     "lmstudio_base_url": self.valves.embedder_base_url,
                     "api_key": self.valves.embedder_api_key,
                     "model": self.valves.embedder_model,
-                    "embedding_dims": str(self.valves.embedding_model_dims),
                 },
             },
         }
