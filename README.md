@@ -103,7 +103,6 @@ mem0-owui provides two deployment options:
 | Parameter | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `embedder_provider` | ✅ | "openai" | Embedding provider |
-| `embedder_base_url` | ✅ | "https://openrouter.ai/api/v1" | Embedding API base URL |
 | `embedder_api_key` | ✅ | "placeholder" | Embedding API key |
 | `embedder_model` | ✅ | "text-embedding-3-small" | Embedding model name |
 

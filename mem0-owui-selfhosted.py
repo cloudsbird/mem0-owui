@@ -51,9 +51,6 @@ class Pipeline:
         embedder_provider: str = Field(
             default="openai", description="Embedding provider"
         )
-        embedder_base_url: str = Field(
-            default="https://openrouter.ai/api/v1", description="Embedding API base URL"
-        )
         embedder_api_key: str = Field(
             default="placeholder", description="Embedding API key"
         )
@@ -203,15 +200,14 @@ class Pipeline:
                 "config": {
                     "api_key": self.valves.llm_api_key,
                     "model": self.valves.llm_model,
-                    "openai_base_url": self.valves.llm_base_url,
+                    "openai_base_url": self.valves.llm_base_url
                 },
             },
             "embedder": {
                 "provider": self.valves.embedder_provider,
                 "config": {
-                    "openai_base_url": self.valves.embedder_base_url,
                     "api_key": self.valves.embedder_api_key,
-                    "model": self.valves.embedder_model,
+                    "model": self.valves.embedder_model
                 },
             },
         }
