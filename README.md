@@ -6,10 +6,11 @@ A memory filter integration for OpenWebUI using mem0 to persist and retrieve con
 
 ## Overview
 
-mem0-owui provides two deployment options:
+mem0-owui provides three deployment options:
 
 1. **Managed Version**: Simple setup using mem0's cloud service - just provide an API key
 2. **Self-Hosted Version**: Complete control with your own vector database and embedding infrastructure
+3. **OpenRouter Version**: Self-hosted with OpenRouter integration for both LLM and embeddings, plus Neo4j graph storage
 
 ## Features
 
@@ -34,6 +35,13 @@ mem0-owui provides two deployment options:
   - LLM provider (OpenAI, OpenRouter, etc.)
   - Embedding model provider
 
+- **OpenRouter Version**:
+  - mem0ai[graph]==1.0.0
+  - pydantic==2.12.3
+  - Qdrant vector database
+  - Neo4j graph database
+  - OpenRouter API key (for both LLM and embeddings)
+
 ## Installation
 
 ### Managed Version (Recommended)
@@ -48,17 +56,33 @@ mem0-owui provides two deployment options:
 
 ### Self-Hosted Version
 
-1. Clone the repository:  
+1. Clone the repository:
    `git clone https://github.com/mem0ai/mem0-owui.git`
-2. Configure Docker:  
+2. Configure Docker:
    ```bash
    cp docker-compose.example.yml docker-compose.yml
    # Edit docker-compose.yml with your configuration
    ```
-3. Start the service:  
+3. Start the service:
    `docker-compose up -d`
 4. Configure OpenWebUI to use your self-hosted endpoint
 5. Upload `mem0-owui-selfhosted.py` through the dashboard
+
+### OpenRouter Version (Recommended)
+
+1. Clone the repository:
+   `git clone https://github.com/mem0ai/mem0-owui.git`
+2. Configure Docker:
+   ```bash
+   cp docker-compose.example.yml docker-compose.yml
+   # Edit docker-compose.yml with your OpenRouter API key and Neo4j password
+   ```
+3. Start the complete stack:
+   ```bash
+   docker-compose up -d
+   ```
+4. Access OpenWebUI at http://localhost:3000
+5. The pipeline will be automatically loaded with OpenRouter integration
 
 ## Configuration
 
@@ -106,6 +130,53 @@ mem0-owui provides two deployment options:
 | `embedder_api_key` | ✅ | "placeholder" | Embedding API key |
 | `embedder_model` | ✅ | "text-embedding-3-small" | Embedding model name |
 
+### OpenRouter Version Parameters
+
+#### Basic Configuration
+
+| Parameter | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `user_id` | ❌ | "default_user" | Default user ID for memory storage |
+| `pipelines` | ❌ | ["*"] | Pipeline IDs to apply the filter to |
+| `priority` | ❌ | 0 | Filter execution order (lower = earlier) |
+| `enable_memory` | ❌ | true | Enable/disable memory functionality |
+| `memory_threshold` | ❌ | 0.7 | Similarity threshold for memory retrieval (0.0-1.0) |
+| `max_memories` | ❌ | 5 | Maximum number of memories to retrieve |
+| `memory_context_window` | ❌ | 10 | Number of recent messages to consider |
+
+#### Vector Store Configuration
+
+| Parameter | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `qdrant_host` | ✅ | "qdrant" | Qdrant vector database host |
+| `qdrant_port` | ✅ | "6333" | Qdrant vector database port |
+| `collection_name` | ✅ | "mem1536" | Qdrant collection name |
+
+#### LLM Configuration
+
+| Parameter | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `llm_provider` | ✅ | "openai" | LLM provider (openai) |
+| `llm_api_key` | ✅ | "placeholder" | OpenRouter API key |
+| `llm_model` | ✅ | "openai/gpt-4o-mini" | OpenRouter LLM model name |
+| `llm_base_url` | ✅ | "https://openrouter.ai/api/v1" | OpenRouter API base URL |
+
+#### Embedder Configuration
+
+| Parameter | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `embedder_provider` | ✅ | "openai" | Embedding provider (openai) |
+| `embedder_api_key` | ✅ | "placeholder" | OpenRouter API key |
+| `embedder_model` | ✅ | "openai/text-embedding-3-small" | OpenRouter embedding model |
+
+#### Neo4j Graph Store Configuration
+
+| Parameter | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `neo4j_url` | ✅ | "bolt://neo4j:7687" | Neo4j database URL |
+| `neo4j_username` | ✅ | "neo4j" | Neo4j username |
+| `neo4j_password` | ✅ | "your_password" | Neo4j password |
+
 ## How It Works
 
 ### Memory Workflow
@@ -129,6 +200,7 @@ mem0-owui provides two deployment options:
 
 - **Managed Version**: Uses `MemoryClient` from mem0 for a simple, synchronous implementation
 - **Self-Hosted Version**: Uses `AsyncMemory` for asynchronous operations with more configuration options
+- **OpenRouter Version**: Advanced implementation with `AsyncMemory`, Neo4j graph storage, configurable memory parameters, and comprehensive logging
 
 ## Troubleshooting
 
@@ -202,8 +274,11 @@ A: Yes, use unique user IDs for each instance to maintain separate memory contex
 **Q: What happens if the mem0 service is unavailable?**  
 A: The filter will fail gracefully, allowing normal OpenWebUI operation without memory context.
 
-**Q: Which version should I choose?**  
-A: The managed version is simpler to set up and maintain, while the self-hosted version offers more control and customization options. Choose based on your needs for privacy, control, and ease of maintenance.
+**Q: Which version should I choose?**
+A: The managed version is simplest to set up, the OpenRouter version offers the best balance of features and ease of use with Neo4j graph storage, while the basic self-hosted version provides maximum customization. Choose based on your needs for privacy, control, and features.
 
-**Q: How can I customize the memory retrieval process?**  
-A: The self-hosted version allows you to configure the vector database, embedding model, and LLM settings to fine-tune the memory retrieval process.
+**Q: How can I customize the memory retrieval process?**
+A: The OpenRouter version provides the most configuration options including similarity thresholds, memory limits, and context windows. The self-hosted version allows full control over vector database, embedding model, and LLM settings.
+
+**Q: What are the benefits of the Neo4j graph store in the OpenRouter version?**
+A: Neo4j enables advanced memory relationships and graph-based queries, allowing for more sophisticated memory retrieval and relationship mapping between different pieces of information.

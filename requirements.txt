@@ -1,2 +1,2 @@
-mem0ai==1.0.0
+mem0ai[graph]==1.0.0
 pydantic==2.12.3
