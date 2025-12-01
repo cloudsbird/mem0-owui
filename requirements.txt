@@ -1,2 +1,2 @@
 mem0ai==1.0.0
-pydantic==2.12.3
+pydantic==2.12.5
